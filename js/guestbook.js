@@ -3,9 +3,9 @@
  * 
  * SECURITY ARCHITECTURE:
  *  - Queries `guestbook_public` view: password_hash is NEVER transmitted to the browser.
- *  - Master Password ('0000') & Author Passwords are ONLY verified server-side inside Postgres RPC functions.
+ *  - Entry passwords are verified only inside Supabase RPC functions.
  *  - Client uses minimal-privilege publishable key protected by Row Level Security (RLS).
- *  - Direct client updates/deletes are blocked by RLS; atomic changes occur via SECURITY DEFINER functions.
+ *  - Direct table writes are blocked; guestbook changes go through dedicated RPC functions.
  */
 
 (function () {
@@ -330,7 +330,7 @@
     if (btnEditConfirm) btnEditConfirm.disabled = true;
 
     try {
-      // Call secure server RPC function (verifies either author password or master password)
+      // Verify the entry password inside the database RPC function.
       const { data: success, error } = await supabaseClient.rpc('verify_and_update_guestbook', {
         entry_id: id,
         input_password: trimmedPw,
@@ -408,7 +408,7 @@
     if (btnDeleteConfirm) btnDeleteConfirm.disabled = true;
 
     try {
-      // Call secure server RPC function (verifies either author password or master password)
+      // Verify the entry password inside the database RPC function.
       const { data: success, error } = await supabaseClient.rpc('verify_and_delete_guestbook', {
         entry_id: id,
         input_password: trimmedPw
@@ -443,7 +443,7 @@
     }
   }
 
-  // Handle Form Submit: Insert to Supabase
+  // Handle Form Submit: Create entry through secure Supabase RPC
   async function handleFormSubmit(e) {
     e.preventDefault();
 
@@ -477,12 +477,12 @@
     if (submitBtn) submitBtn.disabled = true;
 
     try {
-      // Insert new entry into Supabase
+      // Create a new entry without exposing the password hash column to the browser.
       const { data, error } = await supabaseClient.rpc('create_guestbook_entry', {
-  input_author: author,
-  input_password: password,
-  input_content: content
-});
+        input_author: author,
+        input_password: password,
+        input_content: content
+      });
 
       if (error) throw error;
 
