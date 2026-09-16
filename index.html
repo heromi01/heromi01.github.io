@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>heromi01 | Welcome</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+      color: #f8fafc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 680px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 24px;
+      padding: 48px 40px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      text-align: center;
+      animation: fadeIn 0.8s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .avatar-wrapper {
+      position: relative;
+      width: 100px;
+      height: 100px;
+      margin: 0 auto 24px;
+    }
+
+    .avatar {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+    }
+
+    .status-badge {
+      position: absolute;
+      bottom: 4px;
+      right: 4px;
+      width: 18px;
+      height: 18px;
+      background: #10b981;
+      border: 3px solid #0f172a;
+      border-radius: 50%;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 6px 14px;
+      background: rgba(99, 102, 241, 0.2);
+      border: 1px solid rgba(99, 102, 241, 0.4);
+      color: #a5b4fc;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      margin-bottom: 12px;
+      background: linear-gradient(to right, #ffffff, #c7d2fe);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .description {
+      font-size: 1.05rem;
+      color: #94a3b8;
+      line-height: 1.6;
+      margin-bottom: 32px;
+      word-break: keep-all;
+    }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 36px;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 20px 16px;
+      transition: all 0.3s ease;
+      text-align: left;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      background: rgba(255, 255, 255, 0.07);
+      border-color: rgba(99, 102, 241, 0.4);
+    }
+
+    .card-icon {
+      font-size: 1.5rem;
+      margin-bottom: 8px;
+    }
+
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #e2e8f0;
+      margin-bottom: 4px;
+    }
+
+    .card-desc {
+      font-size: 0.82rem;
+      color: #64748b;
+      line-height: 1.4;
+    }
+
+    .links {
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+
+    .btn-primary {
+      background: #4f46e5;
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4);
+    }
+
+    .btn-primary:hover {
+      background: #4338ca;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(79, 70, 229, 0.6);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: #e2e8f0;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+      transform: translateY(-2px);
+    }
+
+    footer {
+      margin-top: 36px;
+      font-size: 0.8rem;
+      color: #475569;
+    }
+
+    @media (max-width: 480px) {
+      .container {
+        padding: 32px 20px;
+      }
+      h1 {
+        font-size: 1.75rem;
+      }
+      .cards-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <div class="avatar-wrapper">
+      <img src="https://avatars.githubusercontent.com/u/318862903?v=4" alt="heromi01 avatar" class="avatar" />
+      <span class="status-badge" title="Online"></span>
+    </div>
+
+    <div class="badge">🚀 GitHub Pages Active</div>
+    <h1>Hello, I'm heromi01 👋</h1>
+    <p class="description">
+      GitHub Pages 개인 웹사이트에 오신 것을 환영합니다.<br />
+      이곳은 앞으로의 프로젝트와 다양한 학습 기록들을 공유할 공간입니다.
+    </p>
+
+    <div class="cards-grid">
+      <div class="card">
+        <div class="card-icon">💻</div>
+        <div class="card-title">Development</div>
+        <div class="card-desc">아이디어를 코드로 구현하는 여정</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">📚</div>
+        <div class="card-title">Study & Log</div>
+        <div class="card-desc">배우고 경험한 지식의 체계적 기록</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🌱</div>
+        <div class="card-title">Projects</div>
+        <div class="card-desc">지속적으로 성장하고 완성해 나갈 결과물들</div>
+      </div>
+    </div>
+
+    <div class="links">
+      <a href="https://github.com/heromi01" target="_blank" rel="noopener noreferrer" class="btn btn-primary">
+        <svg height="18" width="18" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+        </svg>
+        GitHub 프로필
+      </a>
+      <a href="https://github.com/heromi01/heromi01.github.io" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">
+        📂 저장소 바로가기
+      </a>
+    </div>
+
+    <footer>
+      © 2026 heromi01. Powered by GitHub Pages.
+    </footer>
+  </main>
+</body>
+</html>
