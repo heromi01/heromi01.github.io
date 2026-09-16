@@ -1,86 +1,153 @@
-# 🌐 heromi01.github.io
+# heromi01.github.io
 
-> **GitHub Pages & Supabase 기반의 개인 포트폴리오, 기술 블로그 및 실시간 방명록 웹사이트**  
-> 🔗 **배포 URL**: [https://heromi01.github.io](https://heromi01.github.io)
+GitHub Pages로 운영하는 개인 웹사이트입니다. 현재는 메인 페이지, 방명록, 보안/개발 기록 페이지를 중심으로 구성되어 있으며, 앞으로 포트폴리오, 프로젝트 기록, 학습 로그, 이미지와 문서 자산이 계속 추가될 수 있도록 파일 역할을 분리해 둡니다.
 
----
+- 배포 URL: https://heromi01.github.io
+- 저장소: https://github.com/heromi01/heromi01.github.io
+- 호스팅: GitHub Pages
+- 데이터베이스: Supabase PostgreSQL
 
-## 📁 디렉토리 구조 (Directory Architecture)
-
-프로젝트가 확장됨에 따라 유지보수성을 극대화하기 위해 페이지, 스타일, 스크립트, 정적 에셋을 체계적으로 분리한 표준 웹 아키텍처를 채택하고 있습니다.
+## 현재 구성
 
 ```text
 heromi01.github.io/
-├── index.html                 # 🌐 메인 랜딩 페이지 (GitHub Pages 진입점)
-│
-├── pages/                     # 📄 서브 페이지 디렉토리
-│   ├── guestbook.html         # 💬 독립형 방명록 전용 페이지
-│   └── study-log.html         # 📚 스터디 & 로그 (보안 아키텍처 연동기)
-│
-├── css/                       # 🎨 스타일시트 디렉토리
-│   └── guestbook.css          # 방명록 컴포넌트, 모달 및 글래스모피즘 테마 스타일
-│
-├── js/                        # ⚙️ 자바스크립트 로직 디렉토리
-│   ├── supabase-config.js     # Supabase 클라이언트 접속 설정 (Publishable Anon Key)
-│   └── guestbook.js           # 방명록 CRUD, 실시간 동기화, UI 제어 로직
-│
-├── assets/                    # 🖼️ 정적 리소스 디렉토리
-│   ├── images/                # 프로필 사진, 썸네일, 설명 다이어그램 등
-│   └── icons/                 # 파비콘, SVG 아이콘 등
-│
-├── README.md                  # 📖 프로젝트 소개 및 아키텍처 가이드 문서
-└── .gitignore                 # 🔒 민감 정보 및 시스템 임시 파일 Git 추적 제외
+├── index.html
+├── pages/
+│   ├── guestbook.html
+│   └── study-log.html
+├── css/
+│   └── guestbook.css
+├── js/
+│   ├── supabase-config.js
+│   └── guestbook.js
+├── assets/
+│   ├── icons/
+│   └── images/
+├── README.md
+└── .gitignore
 ```
 
----
+## 파일 역할
 
-## ✨ 주요 기능 및 특징
+| 경로 | 역할 | 운영 기준 |
+| --- | --- | --- |
+| `index.html` | 사이트 첫 화면 | 주요 페이지로 이동하는 허브 역할을 유지합니다. 새 페이지가 생기면 이곳에 링크를 추가합니다. |
+| `pages/` | 독립 HTML 페이지 | 방명록, 학습 기록, 포트폴리오, 프로젝트 상세 페이지를 둡니다. |
+| `css/` | 스타일 파일 | 기능이나 페이지 단위로 CSS를 분리합니다. 공통 스타일이 커지면 `base.css` 같은 공통 파일을 추가합니다. |
+| `js/` | 브라우저 JavaScript | 화면 동작과 Supabase 호출 코드를 둡니다. 비밀 키나 관리자 권한 키는 절대 넣지 않습니다. |
+| `assets/images/` | 이미지 자료 | 프로필, 썸네일, 설명 이미지 등을 보관합니다. |
+| `assets/icons/` | 아이콘 자료 | 파비콘, SVG 아이콘 등을 보관합니다. |
+| `.gitignore` | Git 제외 규칙 | `.env`, 비밀 키, 로컬 설정 파일이 GitHub에 올라가지 않도록 관리합니다. |
 
-1. **메인 랜딩 대시보드 (`index.html`)**
-   - 현대적인 다크 모드 글래스모피즘(Glassmorphism) UI
-   - 개발 활동, 프로젝트, 스터디 로그로 연결되는 반응형 카드 그리드
-   - 메인 화면 내에서 바로 작성/조회 가능한 임베드형 실시간 방명록
+## 주요 기능
 
-2. **클라우드 연동 실시간 방명록 (`pages/guestbook.html`)**
-   - **클라우드 DB**: Supabase PostgreSQL 기반 데이터 영구 보존
-   - **실시간 반응**: 등록, 수정, 삭제, 공감(좋아요) 토글 즉시 반영
-   - **독립 팝업 모달**: 등록 완료 확인창, 비밀번호 기반 수정 모달, 삭제 확인 모달
-   - **관리자 권한**: 작성자 비밀번호 일치 시 또는 관리자 마스터 키 입력 시 삭제 권한 부여
+### 메인 페이지
 
-3. **기술 아키텍처 기록 (`pages/study-log.html`)**
-   - 정적 웹 호스팅 환경에서 BaaS 연동 시 발생하는 보안 이슈 분석
-   - **최소 권한 RLS (Row Level Security)** 및 **PostgreSQL RPC 보안 함수** 설계 내역
-   - 향후 고도화 과제(Edge Functions 분리, Rate Limiting 방어, 자동 백업 파이프라인 등) 정리
+`index.html`은 사이트 진입점입니다. 방문자가 방명록, 학습 기록, GitHub 저장소로 이동할 수 있는 허브 역할을 합니다.
 
----
+### 방명록
 
-## 🔒 보안 아키텍처 원칙 (Security Architecture)
+방명록은 GitHub Pages의 정적 페이지에서 Supabase를 호출하는 구조입니다.
 
-- **Zero Secret Exposure**: `service_role` 시크릿 키는 프론트엔드 코드 및 Git 저장소에 일절 포함되지 않습니다. 브라우저에는 공개용 Publishable Anon Key만 노출됩니다.
-- **Server-side RPC Verification**: 마스터 비밀번호 및 사용자 비밀번호 검증은 브라우저 JavaScript가 아닌 Supabase PostgreSQL의 `SECURITY DEFINER` 함수(`verify_and_delete_guestbook`, `verify_and_update_guestbook`) 내부에서만 안전하게 수행됩니다.
-- **Data Projection View**: 비밀번호 해시/평문이 클라이언트로 전송되는 것을 방지하기 위해 `guestbook_public` 뷰를 통해서만 데이터를 조회합니다.
-- **Strict RLS**: 클라이언트가 직접 테이블에 UPDATE나 DELETE를 날릴 수 없도록 RLS가 원천 차단합니다.
+- 목록 조회: `guestbook_public` 뷰 사용
+- 등록: `create_guestbook_entry` RPC 사용
+- 수정: `verify_and_update_guestbook` RPC 사용
+- 삭제: `verify_and_delete_guestbook` RPC 사용
+- 공감: 별도 RPC 함수로 처리
 
----
+브라우저에는 Supabase URL과 publishable key만 둡니다. 원본 `guestbook` 테이블과 `password_hash` 컬럼은 공개 키로 직접 조회할 수 없도록 차단합니다.
 
-## 🛠️ 향후 신규 페이지 및 파일 추가 가이드
+### 보안/개발 기록
 
-앞으로 새로운 페이지나 기능을 추가할 때는 아래 규칙을 따릅니다:
+`pages/study-log.html`은 GitHub Pages와 Supabase를 함께 사용할 때의 보안 설계와 향후 개선 과제를 기록합니다. 운영 상태가 바뀌면 이 문서도 함께 갱신합니다.
 
-1. **새로운 HTML 페이지 추가 시**:
-   - `pages/` 폴더 아래에 새 파일 생성 (예: `pages/portfolio.html`, `pages/projects.html`)
-   - CSS 참조: `<link rel="stylesheet" href="../css/styles.css" />` (상위 디렉토리 기준)
-   - JS 참조: `<script src="../js/my-script.js"></script>`
-   - 메인 홈 링크: `<a href="../index.html">← 홈으로</a>`
-2. **새로운 이미지 및 에셋 추가 시**:
-   - `assets/images/` 또는 `assets/icons/` 에 파일 배치
-   - 웹페이지에서 상대 경로로 참조 (예: `assets/images/my-photo.png` 또는 `../assets/images/...`)
-3. **스타일 및 스크립트 모듈화**:
-   - 컴포넌트별로 `css/`, `js/` 하위에 깔끔하게 분리하여 저장
+## 보안 원칙
 
----
+1. `service_role`, `sb_secret`, DB 비밀번호, 관리자용 비밀 값은 GitHub와 브라우저 코드에 넣지 않습니다.
+2. Supabase URL과 publishable key는 공개될 수 있는 값입니다. 대신 RLS, 권한, RPC 함수로 가능한 동작을 제한합니다.
+3. 방명록 원본 테이블을 브라우저에서 직접 읽거나 쓰지 않습니다.
+4. 비밀번호 해시 컬럼은 공개 뷰에 포함하지 않습니다.
+5. 새 기능을 추가할 때는 먼저 공개 조회가 필요한 데이터와 서버 내부에서만 처리해야 할 데이터를 분리합니다.
+6. 배포 전에는 `README.md`, HTML, JS 주석에 예전 비밀 값이나 테스트용 비밀번호가 남아 있지 않은지 확인합니다.
 
-## 📝 라이선스 & 작성자
+## 새 파일 추가 기준
 
-- 작성자: [heromi01](https://github.com/heromi01)
-- 배포 플랫폼: GitHub Pages & Supabase
+### 새 HTML 페이지
+
+새 페이지는 `pages/` 아래에 만듭니다.
+
+```text
+pages/project-name.html
+```
+
+추가 후 확인할 것:
+
+- `index.html` 또는 관련 페이지에 이동 링크 추가
+- 필요한 CSS/JS 파일 연결
+- 모바일 화면에서 내용이 깨지지 않는지 확인
+- 외부 링크에는 필요한 경우 `target="_blank"`와 `rel="noopener noreferrer"` 사용
+
+### 새 CSS 파일
+
+페이지나 기능 단위로 분리합니다.
+
+```text
+css/project-name.css
+```
+
+공통 스타일이 반복되면 나중에 `css/base.css` 또는 `css/layout.css`로 분리합니다.
+
+### 새 JavaScript 파일
+
+기능 단위로 분리합니다.
+
+```text
+js/project-name.js
+```
+
+주의할 것:
+
+- 비밀 키를 넣지 않습니다.
+- 관리자 권한 작업을 브라우저에서 직접 처리하지 않습니다.
+- DB 쓰기는 가능한 한 Supabase RPC나 서버 측 함수로 제한합니다.
+
+### 새 이미지와 아이콘
+
+이미지는 `assets/images/`, 아이콘은 `assets/icons/`에 둡니다.
+
+파일명은 나중에 찾기 쉽도록 소문자와 하이픈을 사용합니다.
+
+```text
+assets/images/profile-main.png
+assets/icons/site-favicon.svg
+```
+
+## 운영 체크리스트
+
+변경 전:
+
+- 어떤 페이지/기능을 바꾸는지 정합니다.
+- 보안에 영향을 주는 DB, JS, 설정 변경인지 확인합니다.
+- 관련 파일만 수정합니다.
+
+변경 후:
+
+- 사이트에서 직접 새로고침 후 동작을 확인합니다.
+- 방명록 등록, 수정, 삭제, 공감처럼 사용자 흐름을 한 번씩 테스트합니다.
+- 공개 파일에 `service_role`, `sb_secret`, 테스트용 비밀번호 같은 문자열이 없는지 확인합니다.
+- Supabase 공개 키로 원본 테이블과 비밀번호 컬럼이 직접 조회되지 않는지 확인합니다.
+- README와 `study-log.html` 내용이 실제 구현 상태와 맞는지 확인합니다.
+
+## 앞으로의 개선 후보
+
+- 스팸 방어: Cloudflare Turnstile, Rate Limiting, Edge Functions 검토
+- 관리자 기능: GitHub OAuth 또는 이메일 Magic Link 기반 관리자 세션 검토
+- 공감 기능 강화: 익명 사용자 식별 또는 중복 공감 방지 구조 검토
+- 백업: 방명록 데이터를 정기적으로 JSON 또는 CSV로 백업하는 방식 검토
+- 문서화: 새 페이지가 늘어날 때 README의 파일 역할 표와 운영 체크리스트 갱신
+
+## 참고 문서
+
+- Supabase API Keys: https://supabase.com/docs/guides/getting-started/api-keys
+- Supabase Row Level Security: https://supabase.com/docs/guides/database/postgres/row-level-security
+- GitHub Pages: https://docs.github.com/pages
