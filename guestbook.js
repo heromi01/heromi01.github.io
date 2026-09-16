@@ -1,24 +1,28 @@
 /**
- * Guestbook System for GitHub Pages (heromi01.github.io)
- * Features:
- *  - Persistent storage using localStorage
- *  - Author nickname, message, and deletion/edit password
- *  - Master Password validation (Quiet admin access)
- *  - Author Edit functionality with password check
- *  - Sympathy / Like reaction feature with localStorage state
- *  - Dedicated Completion & Action Modals
- *  - Full XSS protection
+ * Guestbook System connected with Supabase Cloud Database
+ * 
+ * SECURITY ARCHITECTURE:
+ *  - Queries `guestbook_public` view: password_hash is NEVER transmitted to the browser.
+ *  - Master Password ('0000') & Author Passwords are ONLY verified server-side inside Postgres RPC functions.
+ *  - Client uses minimal-privilege publishable key protected by Row Level Security (RLS).
+ *  - Direct client updates/deletes are blocked by RLS; atomic changes occur via SECURITY DEFINER functions.
  */
 
 (function () {
   'use strict';
 
-  const STORAGE_KEY = 'heromi01_guestbook_entries';
   const LIKES_KEY = 'heromi01_liked_entries';
-  
-  // Master Key verification hash / token (Admin only)
-  // Base64 of '0000' is 'MDAwMA=='
-  const MASTER_TOKEN = 'MDAwMA==';
+
+  // Initialize Supabase Client
+  let supabaseClient = null;
+  if (window.supabase && window.SUPABASE_CONFIG) {
+    supabaseClient = window.supabase.createClient(
+      window.SUPABASE_CONFIG.url,
+      window.SUPABASE_CONFIG.anonKey
+    );
+  } else {
+    console.error('Supabase library or configuration is not loaded.');
+  }
 
   // State
   let entries = [];
@@ -26,11 +30,12 @@
   let pendingDeleteId = null;
   let pendingEditId = null;
 
-  // DOM Elements - Main Form
+  // DOM Elements - Form
   const form = document.getElementById('guestbook-form');
   const authorInput = document.getElementById('author-input');
   const passwordInput = document.getElementById('password-input');
   const contentInput = document.getElementById('content-input');
+  const submitBtn = document.querySelector('.btn-submit');
   const listContainer = document.getElementById('guestbook-list');
   const countBadge = document.getElementById('guestbook-count');
 
@@ -59,7 +64,7 @@
   const btnDeleteCancel = document.getElementById('btn-delete-cancel');
   const btnDeleteConfirm = document.getElementById('btn-delete-confirm');
 
-  // Helper: Escape HTML to prevent XSS
+  // Helper: Escape HTML
   function escapeHtml(str) {
     if (!str) return '';
     return str
@@ -70,15 +75,9 @@
       .replace(/'/g, '&#039;');
   }
 
-  // Helper: Check if input matches master key
-  function isMasterKey(inputPw) {
-    if (!inputPw) return false;
-    const trimmed = inputPw.trim();
-    return trimmed === '0000' || btoa(trimmed) === MASTER_TOKEN;
-  }
-
   // Helper: Format Date
   function formatDate(isoString) {
+    if (!isoString) return '';
     const d = new Date(isoString);
     const pad = (n) => String(n).padStart(2, '0');
     const year = d.getFullYear();
@@ -89,88 +88,59 @@
     return `${year}.${month}.${day} ${hours}:${minutes}`;
   }
 
-  // Generate avatar character from nickname
+  // Generate avatar character
   function getAvatarChar(name) {
     if (!name) return '👤';
     const trimmed = name.trim();
     return trimmed.charAt(0).toUpperCase();
   }
 
-  // Load state from localStorage
-  function loadData() {
+  // Load liked post IDs from localStorage
+  function loadLocalLikes() {
     try {
-      const data = localStorage.getItem(STORAGE_KEY);
+      const data = localStorage.getItem(LIKES_KEY);
       if (data) {
-        entries = JSON.parse(data);
-      } else {
-        // Initial sample welcome message
-        entries = [
-          {
-            id: 'init-1',
-            author: 'heromi01',
-            password: 'admin',
-            content: '환영합니다! 자유롭게 발자국과 따뜻한 응원의 한마디를 남겨주세요. ✨',
-            likes: 1,
-            isEdited: false,
-            createdAt: new Date().toISOString()
-          }
-        ];
-        saveEntries();
-      }
-
-      // Load user likes
-      const likesData = localStorage.getItem(LIKES_KEY);
-      if (likesData) {
-        likedEntryIds = new Set(JSON.parse(likesData));
+        likedEntryIds = new Set(JSON.parse(data));
       }
     } catch (e) {
-      console.error('Failed to load guestbook data', e);
-      entries = [];
       likedEntryIds = new Set();
     }
   }
 
-  // Save entries to localStorage
-  function saveEntries() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
-    } catch (e) {
-      console.error('Failed to save guestbook entries', e);
-    }
-  }
-
-  // Save liked IDs to localStorage
-  function saveLikes() {
+  // Save liked post IDs
+  function saveLocalLikes() {
     try {
       localStorage.setItem(LIKES_KEY, JSON.stringify(Array.from(likedEntryIds)));
     } catch (e) {
-      console.error('Failed to save likes state', e);
+      console.error('Failed to save liked posts', e);
     }
   }
 
-  // Toggle Like / Sympathy
-  function toggleLike(id) {
-    const target = entries.find((e) => e.id === id);
-    if (!target) return;
-
-    if (!target.likes) target.likes = 0;
-
-    if (likedEntryIds.has(id)) {
-      // Unlike
-      likedEntryIds.delete(id);
-      target.likes = Math.max(0, target.likes - 1);
-    } else {
-      // Like
-      likedEntryIds.add(id);
-      target.likes += 1;
+  // Fetch entries from Supabase
+  async function fetchEntries() {
+    if (!supabaseClient) {
+      renderError('Supabase 클라이언트가 초기화되지 않았습니다.');
+      return;
     }
 
-    saveLikes();
-    saveEntries();
-    render();
+    try {
+      // Query guestbook_public view (password_hash is completely excluded)
+      const { data, error } = await supabaseClient
+        .from('guestbook_public')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      entries = data || [];
+      render();
+    } catch (err) {
+      console.error('Error fetching guestbook entries:', err);
+      renderError('방명록을 불러오는 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+    }
   }
 
-  // Render entries list
+  // Render list
   function render() {
     if (countBadge) {
       countBadge.textContent = `${entries.length}개`;
@@ -192,11 +162,11 @@
       .map((item) => {
         const escapedAuthor = escapeHtml(item.author);
         const escapedContent = escapeHtml(item.content);
-        const formattedDate = formatDate(item.createdAt);
+        const formattedDate = formatDate(item.created_at);
         const avatarChar = getAvatarChar(item.author);
         const isLiked = likedEntryIds.has(item.id);
         const likeCount = item.likes || 0;
-        const editedTag = item.isEdited ? '<span class="edited-badge">수정됨</span>' : '';
+        const editedTag = item.is_edited ? '<span class="edited-badge">수정됨</span>' : '';
 
         return `
           <article class="guestbook-item" data-id="${item.id}">
@@ -241,7 +211,48 @@
       .join('');
   }
 
-  // Open Success Modal (별도 알림 창)
+  function renderError(message) {
+    if (!listContainer) return;
+    listContainer.innerHTML = `
+      <div class="empty-guestbook" style="color: #f87171; border-color: rgba(239, 68, 68, 0.3);">
+        <div class="empty-icon">⚠️</div>
+        <p>${escapeHtml(message)}</p>
+      </div>
+    `;
+  }
+
+  // Toggle Like via Supabase Atomic RPC
+  async function toggleLike(id) {
+    if (!supabaseClient) return;
+
+    const target = entries.find((e) => e.id === id);
+    if (!target) return;
+
+    const isCurrentlyLiked = likedEntryIds.has(id);
+    const rpcName = isCurrentlyLiked ? 'decrement_guestbook_like' : 'increment_guestbook_like';
+
+    try {
+      if (isCurrentlyLiked) {
+        likedEntryIds.delete(id);
+        target.likes = Math.max(0, (target.likes || 1) - 1);
+      } else {
+        likedEntryIds.add(id);
+        target.likes = (target.likes || 0) + 1;
+      }
+      saveLocalLikes();
+      render(); // Optimistic UI update
+
+      const { data: newLikes, error } = await supabaseClient.rpc(rpcName, { entry_id: id });
+      if (error) throw error;
+
+      target.likes = newLikes;
+      render();
+    } catch (err) {
+      console.error('Like toggle failed:', err);
+    }
+  }
+
+  // Open Success Modal
   function openSuccessModal(title, desc, entry) {
     if (!successModal) {
       alert(`🎉 [${title}]\n${desc}\n작성자: ${entry.author}`);
@@ -250,7 +261,7 @@
     if (successTitle) successTitle.textContent = title;
     if (successDesc) successDesc.textContent = desc;
     if (successAuthor) successAuthor.textContent = entry.author;
-    if (successTime) successTime.textContent = formatDate(entry.createdAt);
+    if (successTime) successTime.textContent = formatDate(entry.created_at || new Date().toISOString());
     if (successContent) successContent.textContent = entry.content;
 
     successModal.classList.add('active');
@@ -258,9 +269,7 @@
 
   // Close Success Modal
   function closeSuccessModal() {
-    if (successModal) {
-      successModal.classList.remove('active');
-    }
+    if (successModal) successModal.classList.remove('active');
   }
 
   // Open Edit Modal
@@ -273,15 +282,9 @@
 
     pendingEditId = id;
 
-    if (editAuthorDisplay) {
-      editAuthorDisplay.textContent = target.author;
-    }
-    if (editContentInput) {
-      editContentInput.value = target.content;
-    }
-    if (editPasswordInput) {
-      editPasswordInput.value = '';
-    }
+    if (editAuthorDisplay) editAuthorDisplay.textContent = target.author;
+    if (editContentInput) editContentInput.value = target.content;
+    if (editPasswordInput) editPasswordInput.value = '';
     if (editErrorMsg) {
       editErrorMsg.textContent = '';
       editErrorMsg.classList.remove('active');
@@ -298,19 +301,12 @@
   // Close Edit Modal
   function closeEditModal() {
     pendingEditId = null;
-    if (editModal) {
-      editModal.classList.remove('active');
-    }
+    if (editModal) editModal.classList.remove('active');
   }
 
-  // Confirm Edit
-  function confirmEdit(id, inputPw, newContent) {
-    const target = entries.find((e) => e.id === id);
-    if (!target) {
-      alert('이미 삭제되었거나 존재하지 않는 항목입니다.');
-      closeEditModal();
-      return;
-    }
+  // Confirm Edit: Secure Server-side verification via Postgres RPC
+  async function confirmEdit(id, inputPw, newContent) {
+    if (!supabaseClient) return;
 
     const trimmedPw = (inputPw || '').trim();
     const trimmedContent = (newContent || '').trim();
@@ -331,45 +327,54 @@
       return;
     }
 
-    // Check Password (Author's password OR Master Key)
-    const isMaster = isMasterKey(trimmedPw);
-    const isAuthorMatch = trimmedPw === target.password;
+    if (btnEditConfirm) btnEditConfirm.disabled = true;
 
-    if (isMaster || isAuthorMatch) {
-      // Edit Success!
-      target.content = trimmedContent;
-      target.isEdited = true;
-      target.updatedAt = new Date().toISOString();
+    try {
+      // Call secure server RPC function (verifies either author password or master password)
+      const { data: success, error } = await supabaseClient.rpc('verify_and_update_guestbook', {
+        entry_id: id,
+        input_password: trimmedPw,
+        new_content: trimmedContent
+      });
 
-      saveEntries();
-      render();
-      closeEditModal();
+      if (error) throw error;
 
-      openSuccessModal('수정 완료!', '방명록 내용이 성공적으로 수정되었습니다. ✏️', target);
-    } else {
+      if (success) {
+        closeEditModal();
+        await fetchEntries(); // refresh from DB
+
+        const updatedTarget = entries.find((e) => e.id === id) || {
+          author: editAuthorDisplay ? editAuthorDisplay.textContent : '작성자',
+          content: trimmedContent
+        };
+        openSuccessModal('수정 완료!', '방명록 내용이 성공적으로 수정되었습니다. ✏️', updatedTarget);
+      } else {
+        if (editErrorMsg) {
+          editErrorMsg.textContent = '❌ 비밀번호가 일치하지 않습니다.';
+          editErrorMsg.classList.add('active');
+        }
+        if (editPasswordInput) {
+          editPasswordInput.select();
+          editPasswordInput.focus();
+        }
+      }
+    } catch (err) {
+      console.error('Edit error:', err);
       if (editErrorMsg) {
-        editErrorMsg.textContent = '❌ 비밀번호가 일치하지 않습니다.';
+        editErrorMsg.textContent = '❌ 서버 통신 중 오류가 발생했습니다.';
         editErrorMsg.classList.add('active');
       }
-      if (editPasswordInput) {
-        editPasswordInput.select();
-        editPasswordInput.focus();
-      }
+    } finally {
+      if (btnEditConfirm) btnEditConfirm.disabled = false;
     }
   }
 
   // Open Delete Modal
   function openDeleteModal(id) {
     pendingDeleteId = id;
-    if (!deleteModal) {
-      const pw = prompt('삭제 비밀번호를 입력하세요:');
-      if (pw !== null) confirmDelete(id, pw);
-      return;
-    }
+    if (!deleteModal) return;
 
-    if (deletePasswordInput) {
-      deletePasswordInput.value = '';
-    }
+    if (deletePasswordInput) deletePasswordInput.value = '';
     if (deleteErrorMsg) {
       deleteErrorMsg.textContent = '';
       deleteErrorMsg.classList.remove('active');
@@ -384,23 +389,14 @@
   // Close Delete Modal
   function closeDeleteModal() {
     pendingDeleteId = null;
-    if (deleteModal) {
-      deleteModal.classList.remove('active');
-    }
+    if (deleteModal) deleteModal.classList.remove('active');
   }
 
-  // Confirm Delete
-  function confirmDelete(id, inputPw) {
-    const targetIndex = entries.findIndex((e) => e.id === id);
-    if (targetIndex === -1) {
-      alert('이미 삭제되었거나 존재하지 않는 항목입니다.');
-      closeDeleteModal();
-      return;
-    }
+  // Confirm Delete: Secure Server-side verification via Postgres RPC
+  async function confirmDelete(id, inputPw) {
+    if (!supabaseClient) return;
 
-    const target = entries[targetIndex];
     const trimmedPw = (inputPw || '').trim();
-
     if (!trimmedPw) {
       if (deleteErrorMsg) {
         deleteErrorMsg.textContent = '❌ 비밀번호를 입력해주세요.';
@@ -409,34 +405,52 @@
       return;
     }
 
-    // Check Password (Author's password OR Master Key)
-    const isMaster = isMasterKey(trimmedPw);
-    const isAuthorMatch = trimmedPw === target.password;
+    if (btnDeleteConfirm) btnDeleteConfirm.disabled = true;
 
-    if (isMaster || isAuthorMatch) {
-      entries.splice(targetIndex, 1);
-      likedEntryIds.delete(id);
-      saveLikes();
-      saveEntries();
-      render();
-      closeDeleteModal();
+    try {
+      // Call secure server RPC function (verifies either author password or master password)
+      const { data: success, error } = await supabaseClient.rpc('verify_and_delete_guestbook', {
+        entry_id: id,
+        input_password: trimmedPw
+      });
 
-      alert('✅ 방명록이 정상적으로 삭제되었습니다.');
-    } else {
+      if (error) throw error;
+
+      if (success) {
+        likedEntryIds.delete(id);
+        saveLocalLikes();
+        closeDeleteModal();
+        await fetchEntries();
+        alert('✅ 방명록이 정상적으로 삭제되었습니다.');
+      } else {
+        if (deleteErrorMsg) {
+          deleteErrorMsg.textContent = '❌ 비밀번호가 일치하지 않습니다.';
+          deleteErrorMsg.classList.add('active');
+        }
+        if (deletePasswordInput) {
+          deletePasswordInput.select();
+          deletePasswordInput.focus();
+        }
+      }
+    } catch (err) {
+      console.error('Delete error:', err);
       if (deleteErrorMsg) {
-        deleteErrorMsg.textContent = '❌ 비밀번호가 일치하지 않습니다.';
+        deleteErrorMsg.textContent = '❌ 서버 통신 중 오류가 발생했습니다.';
         deleteErrorMsg.classList.add('active');
       }
-      if (deletePasswordInput) {
-        deletePasswordInput.select();
-        deletePasswordInput.focus();
-      }
+    } finally {
+      if (btnDeleteConfirm) btnDeleteConfirm.disabled = false;
     }
   }
 
-  // Handle Form Submit
-  function handleFormSubmit(e) {
+  // Handle Form Submit: Insert to Supabase
+  async function handleFormSubmit(e) {
     e.preventDefault();
+
+    if (!supabaseClient) {
+      alert('데이터베이스 연결에 문제가 발생했습니다.');
+      return;
+    }
 
     const author = (authorInput.value || '').trim();
     const password = (passwordInput.value || '').trim();
@@ -460,42 +474,54 @@
       return;
     }
 
-    const newEntry = {
-      id: 'entry_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
-      author: author,
-      password: password,
-      content: content,
-      likes: 0,
-      isEdited: false,
-      createdAt: new Date().toISOString()
-    };
+    if (submitBtn) submitBtn.disabled = true;
 
-    entries.unshift(newEntry);
-    saveEntries();
-    render();
+    try {
+      // Insert new entry into Supabase
+      const { data, error } = await supabaseClient
+        .from('guestbook')
+        .insert([
+          {
+            author: author,
+            password_hash: password, // processed by RLS / insert policy
+            content: content,
+            likes: 0
+          }
+        ])
+        .select('id, author, content, likes, is_edited, created_at, updated_at');
 
-    // Reset inputs
-    authorInput.value = '';
-    passwordInput.value = '';
-    contentInput.value = '';
+      if (error) throw error;
 
-    openSuccessModal('기록 완료!', '소중한 방명록이 성공적으로 등록되었습니다. 🎉', newEntry);
+      const createdEntry = (data && data[0]) ? data[0] : {
+        author: author,
+        content: content,
+        created_at: new Date().toISOString()
+      };
+
+      // Reset form
+      authorInput.value = '';
+      passwordInput.value = '';
+      contentInput.value = '';
+
+      // Re-fetch to display newest list from cloud
+      await fetchEntries();
+
+      // Show completion modal
+      openSuccessModal('기록 완료!', '소중한 방명록이 Supabase에 안전하게 등록되었습니다. 🎉', createdEntry);
+    } catch (err) {
+      console.error('Insert error:', err);
+      alert('방명록 등록 중 오류가 발생했습니다: ' + (err.message || '다시 시도해주세요.'));
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+    }
   }
 
   // Event Listeners
-  if (form) {
-    form.addEventListener('submit', handleFormSubmit);
-  }
+  if (form) form.addEventListener('submit', handleFormSubmit);
+  if (btnSuccessConfirm) btnSuccessConfirm.addEventListener('click', closeSuccessModal);
 
-  if (btnSuccessConfirm) {
-    btnSuccessConfirm.addEventListener('click', closeSuccessModal);
-  }
-
-  // Edit Event Handlers
-  if (btnEditCancel) {
-    btnEditCancel.addEventListener('click', closeEditModal);
-  }
-
+  // Edit Event Listeners
+  if (btnEditCancel) btnEditCancel.addEventListener('click', closeEditModal);
   if (btnEditConfirm) {
     btnEditConfirm.addEventListener('click', () => {
       if (pendingEditId) {
@@ -508,11 +534,8 @@
     });
   }
 
-  // Delete Event Handlers
-  if (btnDeleteCancel) {
-    btnDeleteCancel.addEventListener('click', closeDeleteModal);
-  }
-
+  // Delete Event Listeners
+  if (btnDeleteCancel) btnDeleteCancel.addEventListener('click', closeDeleteModal);
   if (btnDeleteConfirm) {
     btnDeleteConfirm.addEventListener('click', () => {
       if (pendingDeleteId) {
@@ -563,7 +586,7 @@
 
   // Initialize
   document.addEventListener('DOMContentLoaded', () => {
-    loadData();
-    render();
+    loadLocalLikes();
+    fetchEntries();
   });
 })();

@@ -1,0 +1,18 @@
+# Environment & Secret Keys
+.env
+.env.local
+.env.*.local
+*.secret
+*.pem
+*.key
+
+# Supabase Local Settings
+.supabase
+supabase/.temp
+
+# OS & Editor Files
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
