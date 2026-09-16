@@ -4,7 +4,7 @@
  * SECURITY NOTICE:
  * - Only the Publishable / Anon public key is placed here.
  * - NEVER put the `service_role` secret key in this file.
- * - Sensitive master password checks are handled securely on the Supabase server via RPC/Edge Functions.
+ * - Guestbook writes and password checks run through Supabase RPC functions.
  */
 
 window.SUPABASE_CONFIG = {
