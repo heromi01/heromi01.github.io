@@ -409,20 +409,20 @@
       </p>
 
       <!-- Section 2 -->
-      <h2>2. 보안 설계: 비밀키 분리와 Git 추적 방지 전략</h2>
+      <h2>2. 보안 설계: 공개 키와 비밀 키의 역할 분리</h2>
       <p>
         정적 호스팅 환경에서 클라우드 데이터베이스를 연동할 때 가장 위험한 점은 <strong>"누구나 개발자도구(F12)나 GitHub 공개 저장소의 코드를 열어볼 수 있다"</strong>는 점입니다. 이를 방어하기 위해 다음과 같은 보안 원칙을 수립하고 적용했습니다.
       </p>
 
       <div class="callout callout-danger">
         <strong>⚠️ 절대 노출되어서는 안 되는 비밀키</strong><br>
-        데이터베이스의 모든 RLS를 우회하고 테이블을 직접 조작할 수 있는 <code>service_role</code> 비밀키와 관리자 마스터 키는 <strong>Git 저장소 및 프론트엔드 코드에 1바이트도 포함되지 않아야 합니다.</strong>
+        데이터베이스의 RLS를 우회할 수 있는 <code>service_role</code> 또는 <code>sb_secret</code> 계열 비밀 키는 <strong>Git 저장소 및 프론트엔드 코드에 포함되지 않아야 합니다.</strong>
       </div>
 
       <h3>① 공개 키와 비밀 키의 역할 분리</h3>
       <ul>
-        <li><strong>Publishable / Anon Key</strong>: 브라우저에 공개되는 키로, 오직 데이터베이스의 <strong>RLS(행 단위 보안) 정책</strong>이 허용하는 행위만 수행 가능합니다.</li>
-        <li><strong>Service Role Key</strong>: 데이터베이스 전체 관리자 권한 키로, 프론트엔드나 Git에 올리지 않고 향후 Supabase Edge Functions 서버 환경 내에서만 격리 운용합니다.</li>
+        <li><strong>Publishable / Anon Key</strong>: 브라우저에 공개되는 접속 키입니다. 이 키 자체를 비밀로 보관하는 것이 아니라, RLS와 권한 설정으로 가능한 동작을 제한합니다.</li>
+        <li><strong>Service Role / Secret Key</strong>: 관리자 권한에 해당하는 비밀 키입니다. 정적 사이트, GitHub 저장소, 브라우저 JavaScript에는 절대 넣지 않습니다.</li>
       </ul>
 
       <h3>② Git 추적 방지 (.gitignore)</h3>
@@ -433,72 +433,75 @@
       <!-- Section 3 -->
       <h2>3. 최소 권한 원칙(Least Privilege) RLS 및 서버사이드 RPC</h2>
       <p>
-        데이터베이스 테이블 <code>guestbook</code>에 <strong>Row Level Security (RLS)</strong>를 활성화하여 익명 사용자의 직접 조작을 철저히 제한했습니다.
+        데이터베이스 테이블 <code>guestbook</code>에 <strong>Row Level Security (RLS)</strong>를 활성화하고, 익명 사용자의 원본 테이블 직접 접근을 차단했습니다. 브라우저는 공개 뷰와 필요한 RPC 함수만 사용합니다.
       </p>
 
       <div class="table-wrapper">
         <table>
           <thead>
             <tr>
-              <th>DML 동작</th>
-              <th>적용된 RLS 정책</th>
+              <th>접근 경로</th>
+              <th>현재 허용 상태</th>
               <th>보안 통제 방식</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td><strong>SELECT</strong></td>
-              <td><code>Allow public read access</code></td>
-              <td>모든 방문자가 글 목록을 조회할 수 있도록 허용</td>
+              <td><strong>목록 조회</strong></td>
+              <td><code>guestbook_public</code> 뷰만 허용</td>
+              <td>브라우저에는 <code>password_hash</code>가 없는 공개 컬럼만 전달</td>
             </tr>
             <tr>
-              <td><strong>INSERT</strong></td>
-              <td><code>Allow public insert</code></td>
-              <td>닉네임(1~50자), 본문(1~1000자) 유효성 통과 건만 허용</td>
+              <td><strong>등록</strong></td>
+              <td><code>create_guestbook_entry</code> RPC만 허용</td>
+              <td>비밀번호는 DB 함수 내부에서 해시 처리하고 원본 테이블 직접 INSERT는 차단</td>
             </tr>
             <tr>
-              <td><strong>UPDATE</strong></td>
-              <td><code>Deny direct public update</code></td>
-              <td><strong>클라이언트의 직접 UPDATE 원천 차단 (거부)</strong></td>
+              <td><strong>수정</strong></td>
+              <td><code>verify_and_update_guestbook</code> RPC만 허용</td>
+              <td>입력한 글 비밀번호를 DB 함수 내부에서 검증한 뒤 수정</td>
             </tr>
             <tr>
-              <td><strong>DELETE</strong></td>
-              <td><code>Deny direct public delete</code></td>
-              <td><strong>클라이언트의 직접 DELETE 원천 차단 (거부)</strong></td>
+              <td><strong>삭제</strong></td>
+              <td><code>verify_and_delete_guestbook</code> RPC만 허용</td>
+              <td>입력한 글 비밀번호를 DB 함수 내부에서 검증한 뒤 삭제</td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <h3>비밀번호 노출 없는 안전한 수정/삭제: SECURITY DEFINER RPC</h3>
+      <h3>비밀번호 노출 없는 등록/수정/삭제: Supabase RPC</h3>
       <p>
-        클라이언트에서 비밀번호를 검증하려면 원래 DB에서 비밀번호 컬럼을 읽어와야 하지만, 이는 남의 비밀번호를 볼 수 있는 심각한 보안 결함이 됩니다. 
+        클라이언트에서 비밀번호를 직접 검증하려면 DB에서 비밀번호 컬럼을 읽어와야 하지만, 이는 심각한 보안 결함이 됩니다.
         이를 해결하기 위해:
       </p>
       <ol>
-        <li><strong>공개 뷰(<code>guestbook_public</code>)</strong>를 생성하여 클라이언트 조회 시 <code>password_hash</code> 컬럼 자체를 아예 배제했습니다.</li>
-        <li>수정과 삭제는 Postgres 내부 함수인 <code>verify_and_update_guestbook</code>과 <code>verify_and_delete_guestbook</code>을 <code>SECURITY DEFINER</code>로 실행하여, <strong>비밀번호 및 마스터 키(<code>0000</code>) 대조가 서버 내부에서만 조용히 일어나도록</strong> 설계했습니다.</li>
+        <li><strong>공개 뷰(<code>guestbook_public</code>)</strong>를 생성하여 클라이언트 조회 시 <code>password_hash</code> 컬럼 자체를 배제했습니다.</li>
+        <li>등록, 수정, 삭제는 <code>create_guestbook_entry</code>, <code>verify_and_update_guestbook</code>, <code>verify_and_delete_guestbook</code> 함수로 처리하여 비밀번호 검증과 해시 처리가 DB 내부에서만 일어나도록 했습니다.</li>
       </ol>
 
       <!-- Section 4 -->
-      <h2>4. 관리자 작업 분리를 위한 Supabase Edge Functions 아키텍처</h2>
+      <h2>4. 향후 운영 분리를 위한 Edge Functions 후보 구조</h2>
       <p>
-        현재 적용된 PostgreSQL RPC 방식에서 한 걸음 더 나아가, 향후 대규모 트래픽이나 복잡한 비즈니스 로직을 처리하기 위해 <strong>Supabase Edge Functions</strong>로 관리자 작업을 분리하는 아키텍처를 설계했습니다.
+        현재는 PostgreSQL RPC 함수로 방명록 등록, 수정, 삭제를 처리합니다. 향후 스팸 방어, 관리자 인증, Rate Limiting처럼 브라우저에 두기 어려운 로직이 늘어나면 <strong>Supabase Edge Functions</strong>를 별도 서버 계층처럼 두는 방식을 검토할 수 있습니다.
       </p>
 
       <pre><code>[ 브라우저 (클라이언트) ]
        │
-       ├─ (일반 조회 / 등록) ──> [ Supabase REST API ] ──> [ RLS 필터링 ] ──> [ DB Table ]
+       ├─ (목록 조회) ──> [ guestbook_public view ]
        │
-       └─ (관리자 강제 삭제 / 필터링)
+       ├─ (등록 / 수정 / 삭제) ──> [ Supabase RPC functions ]
+       │
+       └─ (향후 스팸 방어 / 관리자 작업)
                │
                ▼
    [ Supabase Edge Function (Deno) ]
-   - Secrets 환경변수: MASTER_ADMIN_KEY, SERVICE_ROLE_KEY 보관
-   - IP Rate Limiting 및 Brute-force 공격 방어
-   - AI 기반 악성 스팸 텍스트 자동 검열
+   - 서버 전용 환경변수 보관
+   - IP 기반 호출 제한
+   - 스팸 텍스트 필터링
+   - 관리자 인증 검증
                │
-               ▼ (service_role 안전 호출)
+               ▼
        [ Supabase PostgreSQL DB ]</code></pre>
 
       <!-- Section 5: 핵심 요구사항 (앞으로의 작업 고민 내용) -->
@@ -551,12 +554,12 @@
         <div class="challenge-card">
           <div class="challenge-header">
             <span class="challenge-icon">🔐</span>
-            <span class="challenge-title">4. 마스터 키 체계의 진화: 고정 키에서 관리자 세션 분리로</span>
+            <span class="challenge-title">4. 관리자 작업 체계의 진화: 고정 값에서 관리자 세션으로</span>
             <span class="challenge-badge badge-future">아키텍처 고도화</span>
           </div>
           <p class="challenge-desc">
-            현재는 DB 서버 함수 내부에 마스터 비밀번호가 존재합니다. 안전하게 은닉되어 있지만, 향후 비밀번호를 변경하려면 DB 마이그레이션이 필요합니다.<br>
-            <strong>고민 포인트:</strong> 관리자인 <code>heromi01</code> 본인만 GitHub OAuth 또는 이메일 매직 링크(Magic Link)로 로그인하여 관리자 토큰(JWT)을 획득하고, 이 토큰이 검증될 때만 관리자 전용 삭제 API가 승인되도록 고도화할 계획입니다.
+            향후 관리자가 직접 글을 정리하거나 스팸을 처리해야 하는 상황이 생길 수 있습니다. 이때 고정된 값에 기대는 방식보다 관리자 로그인 세션을 분리하는 편이 운영과 감사에 유리합니다.<br>
+            <strong>고민 포인트:</strong> 관리자인 <code>heromi01</code> 본인만 GitHub OAuth 또는 이메일 매직 링크(Magic Link)로 로그인하여 관리자 토큰(JWT)을 획득하고, 이 토큰이 검증될 때만 관리자 전용 작업이 승인되도록 고도화할 계획입니다.
           </p>
         </div>
 
@@ -577,13 +580,14 @@
       <!-- Section 6 -->
       <h2>6. 배포 전후 보안 체크리스트</h2>
       <div class="callout callout-tip">
-        <strong>✅ 현재 사이트 보안 준수 점검 결과 (전 항목 PASS)</strong>
+        <strong>✅ 현재 적용된 보안 점검 결과</strong>
         <ul style="margin-top: 8px; margin-bottom: 0;">
-          <li>[✓] <strong>Service Role Secret Key</strong>는 Git 저장소 및 번들 파일에 일절 포함되지 않음</li>
-          <li>[✓] <strong>마스터 비밀번호</strong>는 프론트엔드 코드에 노출되지 않고 DB 함수 내부에서만 검증</li>
+          <li>[✓] <strong>Service Role / Secret Key</strong>는 Git 저장소 및 번들 파일에 포함하지 않음</li>
           <li>[✓] <strong>비밀번호 컬럼 비노출</strong>: <code>guestbook_public</code> 뷰를 통해 클라이언트 전송 차단</li>
-          <li>[✓] <strong>최소 권한 RLS</strong>: 클라이언트 직접 UPDATE/DELETE 권한 전면 거부(Deny)</li>
+          <li>[✓] <strong>원본 테이블 직접 접근 차단</strong>: 공개 키로 <code>guestbook</code> 테이블 직접 조회 불가</li>
+          <li>[✓] <strong>등록/수정/삭제 경로 제한</strong>: 클라이언트는 전용 RPC 함수만 호출</li>
           <li>[✓] <strong>Git 추적 방지</strong>: <code>.gitignore</code>에 환경변수 및 비밀 파일 명시 완료</li>
+          <li>[ ] <strong>향후 보강</strong>: 스팸 방어, 관리자 로그인, 정기 백업, 보안 점검 자동화</li>
         </ul>
       </div>
     </main>
