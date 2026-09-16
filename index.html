@@ -3,16 +3,21 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>heromi01 | Welcome</title>
+  <title>heromi01 | Welcome & Guestbook</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="guestbook.css" />
   <style>
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
       font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    html {
+      scroll-behavior: smooth;
     }
 
     body {
@@ -22,11 +27,11 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 20px;
+      padding: 40px 20px;
     }
 
     .container {
-      max-width: 680px;
+      max-width: 720px;
       width: 100%;
       background: rgba(255, 255, 255, 0.05);
       backdrop-filter: blur(16px);
@@ -111,7 +116,7 @@
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 16px;
-      margin-bottom: 36px;
+      margin-bottom: 32px;
     }
 
     .card {
@@ -150,17 +155,18 @@
     .links {
       display: flex;
       justify-content: center;
-      gap: 14px;
+      gap: 12px;
       flex-wrap: wrap;
+      margin-bottom: 20px;
     }
 
     .btn {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 12px 24px;
+      padding: 12px 22px;
       border-radius: 12px;
-      font-size: 0.95rem;
+      font-size: 0.92rem;
       font-weight: 600;
       text-decoration: none;
       transition: all 0.2s ease;
@@ -189,15 +195,30 @@
       transform: translateY(-2px);
     }
 
+    .btn-accent {
+      background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+    }
+
+    .btn-accent:hover {
+      background: linear-gradient(135deg, #047857 0%, #059669 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(16, 185, 129, 0.45);
+    }
+
     footer {
-      margin-top: 36px;
+      margin-top: 40px;
       font-size: 0.8rem;
       color: #475569;
     }
 
-    @media (max-width: 480px) {
+    @media (max-width: 600px) {
+      body {
+        padding: 20px 12px;
+      }
       .container {
-        padding: 32px 20px;
+        padding: 32px 18px;
       }
       h1 {
         font-size: 1.75rem;
@@ -205,11 +226,18 @@
       .cards-grid {
         grid-template-columns: 1fr;
       }
+      .links {
+        flex-direction: column;
+      }
+      .btn {
+        justify-content: center;
+      }
     }
   </style>
 </head>
 <body>
   <main class="container">
+    <!-- Profile & Hero Section -->
     <div class="avatar-wrapper">
       <img src="https://avatars.githubusercontent.com/u/318862903?v=4" alt="heromi01 avatar" class="avatar" />
       <span class="status-badge" title="Online"></span>
@@ -219,9 +247,10 @@
     <h1>Hello, I'm heromi01 👋</h1>
     <p class="description">
       GitHub Pages 개인 웹사이트에 오신 것을 환영합니다.<br />
-      이곳은 앞으로의 프로젝트와 다양한 학습 기록들을 공유할 공간입니다.
+      프로젝트, 학습 기록, 그리고 소중한 발자국을 남길 수 있는 공간입니다.
     </p>
 
+    <!-- Cards Grid -->
     <div class="cards-grid">
       <div class="card">
         <div class="card-icon">💻</div>
@@ -240,7 +269,11 @@
       </div>
     </div>
 
+    <!-- Quick Links -->
     <div class="links">
+      <a href="#guestbook" class="btn btn-accent">
+        💬 방명록 작성하기
+      </a>
       <a href="https://github.com/heromi01" target="_blank" rel="noopener noreferrer" class="btn btn-primary">
         <svg height="18" width="18" viewBox="0 0 16 16" fill="currentColor">
           <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
@@ -252,9 +285,137 @@
       </a>
     </div>
 
+    <!-- Guestbook Section -->
+    <section id="guestbook" class="guestbook-section">
+      <div class="guestbook-header">
+        <h2 class="guestbook-title">
+          <span>💬 방명록</span>
+          <span id="guestbook-count" class="guestbook-count-badge">0개</span>
+        </h2>
+        <span style="font-size: 0.8rem; color: #94a3b8;">방문 기념 한마디를 남겨주세요!</span>
+      </div>
+
+      <!-- Guestbook Form -->
+      <form id="guestbook-form" class="guestbook-form">
+        <div class="form-row">
+          <div class="input-group">
+            <label for="author-input">작성자 닉네임 *</label>
+            <input
+              type="text"
+              id="author-input"
+              maxlength="15"
+              placeholder="예: 멋진개발자"
+              required
+            />
+          </div>
+          <div class="input-group">
+            <label for="password-input">삭제 비밀번호 *</label>
+            <input
+              type="password"
+              id="password-input"
+              maxlength="20"
+              placeholder="삭제 시 필요한 비밀번호"
+              required
+            />
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label for="content-input">방명록 내용 *</label>
+          <textarea
+            id="content-input"
+            rows="3"
+            maxlength="500"
+            placeholder="따뜻한 응원이나 인사말을 자유롭게 남겨주세요 :)"
+            required
+          ></textarea>
+        </div>
+
+        <div class="form-footer">
+          <div class="form-tip">
+            <span>🔑</span>
+            <span>관리자 마스터 비밀번호: <code>0000</code></span>
+          </div>
+          <button type="submit" class="btn-submit">
+            <span>✏️ 방명록 기록하기</span>
+          </button>
+        </div>
+      </form>
+
+      <!-- Guestbook Entries List -->
+      <div id="guestbook-list" class="guestbook-list">
+        <!-- Rendered dynamically by guestbook.js -->
+      </div>
+    </section>
+
     <footer>
       © 2026 heromi01. Powered by GitHub Pages.
     </footer>
   </main>
+
+  <!-- Modal 1: 기록 완료 알림 창 (Dedicated Success Modal) -->
+  <div id="success-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="success-title">
+    <div class="modal-window">
+      <div class="modal-icon success">
+        ✓
+      </div>
+      <h3 id="success-title" class="modal-title">기록 완료!</h3>
+      <p class="modal-desc">
+        소중한 방명록이 성공적으로 등록되었습니다. 🎉
+      </p>
+
+      <div class="modal-preview">
+        <div class="preview-author">
+          <span id="success-modal-author">작성자</span>
+          <span id="success-modal-time" class="preview-time">방금 전</span>
+        </div>
+        <div id="success-modal-content" class="preview-content">
+          방명록 내용 미리보기
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" id="btn-success-confirm" class="btn-modal btn-modal-primary">
+          확인
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: 삭제 확인 창 (Delete Modal with Master Password) -->
+  <div id="delete-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="delete-title">
+    <div class="modal-window">
+      <div class="modal-icon danger">
+        🗑️
+      </div>
+      <h3 id="delete-title" class="modal-title">방명록 삭제</h3>
+      <p class="modal-desc">
+        작성 시 입력한 <strong>비밀번호</strong>를 입력해주세요.<br>
+        <span style="font-size: 0.8rem; color: #a5b4fc;">(마스터 비밀번호 <code>0000</code> 입력 시 즉시 삭제 가능)</span>
+      </p>
+
+      <input
+        type="password"
+        id="delete-password-input"
+        class="modal-input"
+        placeholder="비밀번호 입력"
+        maxlength="20"
+        autocomplete="off"
+      />
+
+      <div id="delete-error-msg" class="modal-error-msg"></div>
+
+      <div class="modal-actions">
+        <button type="button" id="btn-delete-cancel" class="btn-modal btn-modal-cancel">
+          취소
+        </button>
+        <button type="button" id="btn-delete-confirm" class="btn-modal btn-modal-danger">
+          삭제하기
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="guestbook.js"></script>
 </body>
 </html>
