@@ -150,12 +150,12 @@
             />
           </div>
           <div class="input-group">
-            <label for="password-input">삭제 비밀번호 *</label>
+            <label for="password-input">비밀번호 *</label>
             <input
               type="password"
               id="password-input"
               maxlength="20"
-              placeholder="삭제 시 필요한 비밀번호"
+              placeholder="수정/삭제 시 필요한 비밀번호"
               required
             />
           </div>
@@ -174,8 +174,8 @@
 
         <div class="form-footer">
           <div class="form-tip">
-            <span>🔑</span>
-            <span>관리자 마스터 비밀번호: <code>0000</code></span>
+            <span>🔒</span>
+            <span>작성한 글은 설정한 비밀번호로 언제든 수정 및 삭제할 수 있습니다.</span>
           </div>
           <button type="submit" class="btn-submit">
             <span>✏️ 방명록 기록하기</span>
@@ -194,14 +194,14 @@
     </footer>
   </main>
 
-  <!-- Modal 1: 기록 완료 알림 창 (Dedicated Success Modal) -->
+  <!-- Modal 1: 기록 및 수정 완료 알림 창 (Dedicated Success Modal) -->
   <div id="success-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="success-title">
     <div class="modal-window">
       <div class="modal-icon success">
         ✓
       </div>
       <h3 id="success-title" class="modal-title">기록 완료!</h3>
-      <p class="modal-desc">
+      <p id="success-modal-desc" class="modal-desc">
         소중한 방명록이 성공적으로 등록되었습니다. 🎉
       </p>
 
@@ -223,7 +223,54 @@
     </div>
   </div>
 
-  <!-- Modal 2: 삭제 확인 창 (Delete Modal with Master Password) -->
+  <!-- Modal 2: 방명록 수정 창 (Edit Modal) -->
+  <div id="edit-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="edit-title">
+    <div class="modal-window">
+      <div class="modal-icon edit">
+        ✏️
+      </div>
+      <h3 id="edit-title" class="modal-title">방명록 수정</h3>
+      <p class="modal-desc">
+        작성자: <strong id="edit-modal-author-display" style="color: #a5b4fc;"></strong>
+      </p>
+
+      <div class="modal-form-group">
+        <label for="edit-password-input">비밀번호 확인 *</label>
+        <input
+          type="password"
+          id="edit-password-input"
+          class="modal-input"
+          placeholder="작성 시 설정한 비밀번호"
+          maxlength="20"
+          autocomplete="off"
+        />
+      </div>
+
+      <div class="modal-form-group">
+        <label for="edit-content-input">수정할 내용 *</label>
+        <textarea
+          id="edit-content-input"
+          class="modal-textarea"
+          rows="4"
+          maxlength="500"
+          placeholder="수정할 내용을 입력하세요"
+        ></textarea>
+      </div>
+
+      <div id="edit-error-msg" class="modal-error-msg"></div>
+
+      <div class="modal-actions">
+        <button type="button" id="btn-edit-cancel" class="btn-modal btn-modal-cancel">
+          취소
+        </button>
+        <button type="button" id="btn-edit-confirm" class="btn-modal btn-modal-primary">
+          수정 완료
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 3: 삭제 확인 창 (Delete Modal) -->
   <div id="delete-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="delete-title">
     <div class="modal-window">
       <div class="modal-icon danger">
@@ -231,18 +278,20 @@
       </div>
       <h3 id="delete-title" class="modal-title">방명록 삭제</h3>
       <p class="modal-desc">
-        작성 시 입력한 <strong>비밀번호</strong>를 입력해주세요.<br>
-        <span style="font-size: 0.8rem; color: #a5b4fc;">(마스터 비밀번호 <code>0000</code> 입력 시 즉시 삭제 가능)</span>
+        작성 시 입력한 <strong>비밀번호</strong>를 입력해주세요.
       </p>
 
-      <input
-        type="password"
-        id="delete-password-input"
-        class="modal-input"
-        placeholder="비밀번호 입력"
-        maxlength="20"
-        autocomplete="off"
-      />
+      <div class="modal-form-group">
+        <input
+          type="password"
+          id="delete-password-input"
+          class="modal-input danger"
+          placeholder="비밀번호 입력"
+          maxlength="20"
+          autocomplete="off"
+          style="text-align: center; letter-spacing: 2px;"
+        />
+      </div>
 
       <div id="delete-error-msg" class="modal-error-msg"></div>
 

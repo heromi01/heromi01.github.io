@@ -2,10 +2,11 @@
  * Guestbook System for GitHub Pages (heromi01.github.io)
  * Features:
  *  - Persistent storage using localStorage
- *  - Author nickname, message, and author deletion password
- *  - Master Password (0000) for universal deletion
- *  - Dedicated Completion Modal popup upon submission
- *  - Dedicated Deletion Modal popup with password check
+ *  - Author nickname, message, and deletion/edit password
+ *  - Master Password validation (Quiet admin access)
+ *  - Author Edit functionality with password check
+ *  - Sympathy / Like reaction feature with localStorage state
+ *  - Dedicated Completion & Action Modals
  *  - Full XSS protection
  */
 
@@ -13,13 +14,19 @@
   'use strict';
 
   const STORAGE_KEY = 'heromi01_guestbook_entries';
-  const MASTER_PASSWORD = '0000';
+  const LIKES_KEY = 'heromi01_liked_entries';
+  
+  // Master Key verification hash / token (Admin only)
+  // Base64 of '0000' is 'MDAwMA=='
+  const MASTER_TOKEN = 'MDAwMA==';
 
   // State
   let entries = [];
+  let likedEntryIds = new Set();
   let pendingDeleteId = null;
+  let pendingEditId = null;
 
-  // DOM Elements
+  // DOM Elements - Main Form
   const form = document.getElementById('guestbook-form');
   const authorInput = document.getElementById('author-input');
   const passwordInput = document.getElementById('password-input');
@@ -29,10 +36,21 @@
 
   // Success Modal Elements
   const successModal = document.getElementById('success-modal');
+  const successTitle = document.getElementById('success-title');
+  const successDesc = document.getElementById('success-modal-desc');
   const successAuthor = document.getElementById('success-modal-author');
   const successTime = document.getElementById('success-modal-time');
   const successContent = document.getElementById('success-modal-content');
   const btnSuccessConfirm = document.getElementById('btn-success-confirm');
+
+  // Edit Modal Elements
+  const editModal = document.getElementById('edit-modal');
+  const editAuthorDisplay = document.getElementById('edit-modal-author-display');
+  const editPasswordInput = document.getElementById('edit-password-input');
+  const editContentInput = document.getElementById('edit-content-input');
+  const editErrorMsg = document.getElementById('edit-error-msg');
+  const btnEditCancel = document.getElementById('btn-edit-cancel');
+  const btnEditConfirm = document.getElementById('btn-edit-confirm');
 
   // Delete Modal Elements
   const deleteModal = document.getElementById('delete-modal');
@@ -52,6 +70,13 @@
       .replace(/'/g, '&#039;');
   }
 
+  // Helper: Check if input matches master key
+  function isMasterKey(inputPw) {
+    if (!inputPw) return false;
+    const trimmed = inputPw.trim();
+    return trimmed === '0000' || btoa(trimmed) === MASTER_TOKEN;
+  }
+
   // Helper: Format Date
   function formatDate(isoString) {
     const d = new Date(isoString);
@@ -64,15 +89,15 @@
     return `${year}.${month}.${day} ${hours}:${minutes}`;
   }
 
-  // Generate simple avatar character from nickname
+  // Generate avatar character from nickname
   function getAvatarChar(name) {
     if (!name) return '👤';
     const trimmed = name.trim();
     return trimmed.charAt(0).toUpperCase();
   }
 
-  // Load from localStorage
-  function loadEntries() {
+  // Load state from localStorage
+  function loadData() {
     try {
       const data = localStorage.getItem(STORAGE_KEY);
       if (data) {
@@ -83,26 +108,66 @@
           {
             id: 'init-1',
             author: 'heromi01',
-            password: '0000',
-            content: '환영합니다! 자유롭게 발자국을 남겨주세요. ✨\n(마스터 비밀번호: 0000으로 모든 글을 삭제할 수 있습니다)',
+            password: 'admin',
+            content: '환영합니다! 자유롭게 발자국과 따뜻한 응원의 한마디를 남겨주세요. ✨',
+            likes: 1,
+            isEdited: false,
             createdAt: new Date().toISOString()
           }
         ];
         saveEntries();
       }
+
+      // Load user likes
+      const likesData = localStorage.getItem(LIKES_KEY);
+      if (likesData) {
+        likedEntryIds = new Set(JSON.parse(likesData));
+      }
     } catch (e) {
-      console.error('Failed to load guestbook entries', e);
+      console.error('Failed to load guestbook data', e);
       entries = [];
+      likedEntryIds = new Set();
     }
   }
 
-  // Save to localStorage
+  // Save entries to localStorage
   function saveEntries() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
     } catch (e) {
       console.error('Failed to save guestbook entries', e);
     }
+  }
+
+  // Save liked IDs to localStorage
+  function saveLikes() {
+    try {
+      localStorage.setItem(LIKES_KEY, JSON.stringify(Array.from(likedEntryIds)));
+    } catch (e) {
+      console.error('Failed to save likes state', e);
+    }
+  }
+
+  // Toggle Like / Sympathy
+  function toggleLike(id) {
+    const target = entries.find((e) => e.id === id);
+    if (!target) return;
+
+    if (!target.likes) target.likes = 0;
+
+    if (likedEntryIds.has(id)) {
+      // Unlike
+      likedEntryIds.delete(id);
+      target.likes = Math.max(0, target.likes - 1);
+    } else {
+      // Like
+      likedEntryIds.add(id);
+      target.likes += 1;
+    }
+
+    saveLikes();
+    saveEntries();
+    render();
   }
 
   // Render entries list
@@ -129,6 +194,9 @@
         const escapedContent = escapeHtml(item.content);
         const formattedDate = formatDate(item.createdAt);
         const avatarChar = getAvatarChar(item.author);
+        const isLiked = likedEntryIds.has(item.id);
+        const likeCount = item.likes || 0;
+        const editedTag = item.isEdited ? '<span class="edited-badge">수정됨</span>' : '';
 
         return `
           <article class="guestbook-item" data-id="${item.id}">
@@ -136,15 +204,37 @@
               <div class="author-info">
                 <div class="author-avatar">${avatarChar}</div>
                 <div>
-                  <div class="author-name">${escapedAuthor}</div>
+                  <div class="author-name-row">
+                    <span class="author-name">${escapedAuthor}</span>
+                    ${editedTag}
+                  </div>
                   <div class="author-date">${formattedDate}</div>
                 </div>
               </div>
-              <button type="button" class="btn-delete" onclick="window.Guestbook.openDeleteModal('${item.id}')" title="방명록 삭제">
-                🗑️ 삭제
+              <div class="item-actions">
+                <button type="button" class="btn-item-action btn-edit" onclick="window.Guestbook.openEditModal('${item.id}')" title="방명록 수정">
+                  ✏️ 수정
+                </button>
+                <button type="button" class="btn-item-action btn-delete" onclick="window.Guestbook.openDeleteModal('${item.id}')" title="방명록 삭제">
+                  🗑️ 삭제
+                </button>
+              </div>
+            </div>
+
+            <div class="item-content">${escapedContent}</div>
+
+            <div class="item-bottom">
+              <button
+                type="button"
+                class="btn-like ${isLiked ? 'liked' : ''}"
+                onclick="window.Guestbook.toggleLike('${item.id}')"
+                title="${isLiked ? '공감 취소' : '공감하기'}"
+              >
+                <span class="like-icon">${isLiked ? '❤️' : '🤍'}</span>
+                <span>공감</span>
+                <span class="like-count">${likeCount}</span>
               </button>
             </div>
-            <div class="item-content">${escapedContent}</div>
           </article>
         `;
       })
@@ -152,11 +242,13 @@
   }
 
   // Open Success Modal (별도 알림 창)
-  function openSuccessModal(entry) {
+  function openSuccessModal(title, desc, entry) {
     if (!successModal) {
-      alert(`🎉 [기록 완료]\n작성자: ${entry.author}\n방명록이 성공적으로 등록되었습니다!`);
+      alert(`🎉 [${title}]\n${desc}\n작성자: ${entry.author}`);
       return;
     }
+    if (successTitle) successTitle.textContent = title;
+    if (successDesc) successDesc.textContent = desc;
     if (successAuthor) successAuthor.textContent = entry.author;
     if (successTime) successTime.textContent = formatDate(entry.createdAt);
     if (successContent) successContent.textContent = entry.content;
@@ -171,12 +263,106 @@
     }
   }
 
+  // Open Edit Modal
+  function openEditModal(id) {
+    const target = entries.find((e) => e.id === id);
+    if (!target) {
+      alert('해당 방명록을 찾을 수 없습니다.');
+      return;
+    }
+
+    pendingEditId = id;
+
+    if (editAuthorDisplay) {
+      editAuthorDisplay.textContent = target.author;
+    }
+    if (editContentInput) {
+      editContentInput.value = target.content;
+    }
+    if (editPasswordInput) {
+      editPasswordInput.value = '';
+    }
+    if (editErrorMsg) {
+      editErrorMsg.textContent = '';
+      editErrorMsg.classList.remove('active');
+    }
+
+    if (editModal) {
+      editModal.classList.add('active');
+      setTimeout(() => {
+        if (editPasswordInput) editPasswordInput.focus();
+      }, 100);
+    }
+  }
+
+  // Close Edit Modal
+  function closeEditModal() {
+    pendingEditId = null;
+    if (editModal) {
+      editModal.classList.remove('active');
+    }
+  }
+
+  // Confirm Edit
+  function confirmEdit(id, inputPw, newContent) {
+    const target = entries.find((e) => e.id === id);
+    if (!target) {
+      alert('이미 삭제되었거나 존재하지 않는 항목입니다.');
+      closeEditModal();
+      return;
+    }
+
+    const trimmedPw = (inputPw || '').trim();
+    const trimmedContent = (newContent || '').trim();
+
+    if (!trimmedPw) {
+      if (editErrorMsg) {
+        editErrorMsg.textContent = '❌ 비밀번호를 입력해주세요.';
+        editErrorMsg.classList.add('active');
+      }
+      return;
+    }
+
+    if (!trimmedContent) {
+      if (editErrorMsg) {
+        editErrorMsg.textContent = '❌ 수정할 내용을 입력해주세요.';
+        editErrorMsg.classList.add('active');
+      }
+      return;
+    }
+
+    // Check Password (Author's password OR Master Key)
+    const isMaster = isMasterKey(trimmedPw);
+    const isAuthorMatch = trimmedPw === target.password;
+
+    if (isMaster || isAuthorMatch) {
+      // Edit Success!
+      target.content = trimmedContent;
+      target.isEdited = true;
+      target.updatedAt = new Date().toISOString();
+
+      saveEntries();
+      render();
+      closeEditModal();
+
+      openSuccessModal('수정 완료!', '방명록 내용이 성공적으로 수정되었습니다. ✏️', target);
+    } else {
+      if (editErrorMsg) {
+        editErrorMsg.textContent = '❌ 비밀번호가 일치하지 않습니다.';
+        editErrorMsg.classList.add('active');
+      }
+      if (editPasswordInput) {
+        editPasswordInput.select();
+        editPasswordInput.focus();
+      }
+    }
+  }
+
   // Open Delete Modal
   function openDeleteModal(id) {
     pendingDeleteId = id;
     if (!deleteModal) {
-      // Fallback if modal DOM is missing
-      const pw = prompt('삭제 비밀번호 또는 마스터 비밀번호(0000)를 입력하세요:');
+      const pw = prompt('삭제 비밀번호를 입력하세요:');
       if (pw !== null) confirmDelete(id, pw);
       return;
     }
@@ -203,7 +389,7 @@
     }
   }
 
-  // Confirm and Execute Deletion
+  // Confirm Delete
   function confirmDelete(id, inputPw) {
     const targetIndex = entries.findIndex((e) => e.id === id);
     if (targetIndex === -1) {
@@ -215,29 +401,31 @@
     const target = entries[targetIndex];
     const trimmedPw = (inputPw || '').trim();
 
-    // Check Master Password ('0000') OR Author's Password
-    const isMaster = trimmedPw === MASTER_PASSWORD;
+    if (!trimmedPw) {
+      if (deleteErrorMsg) {
+        deleteErrorMsg.textContent = '❌ 비밀번호를 입력해주세요.';
+        deleteErrorMsg.classList.add('active');
+      }
+      return;
+    }
+
+    // Check Password (Author's password OR Master Key)
+    const isMaster = isMasterKey(trimmedPw);
     const isAuthorMatch = trimmedPw === target.password;
 
     if (isMaster || isAuthorMatch) {
-      // Deletion Success!
       entries.splice(targetIndex, 1);
+      likedEntryIds.delete(id);
+      saveLikes();
       saveEntries();
       render();
       closeDeleteModal();
 
-      if (isMaster) {
-        alert('🔑 마스터 비밀번호(0000)가 확인되어 방명록을 강제 삭제하였습니다.');
-      } else {
-        alert('✅ 방명록이 정상적으로 삭제되었습니다.');
-      }
+      alert('✅ 방명록이 정상적으로 삭제되었습니다.');
     } else {
-      // Password Mismatch
       if (deleteErrorMsg) {
-        deleteErrorMsg.textContent = '❌ 비밀번호가 일치하지 않습니다. (마스터 키: 0000)';
+        deleteErrorMsg.textContent = '❌ 비밀번호가 일치하지 않습니다.';
         deleteErrorMsg.classList.add('active');
-      } else {
-        alert('비밀번호가 일치하지 않습니다.');
       }
       if (deletePasswordInput) {
         deletePasswordInput.select();
@@ -261,7 +449,7 @@
     }
 
     if (!password) {
-      alert('삭제 시 사용할 비밀번호를 입력해주세요.');
+      alert('수정/삭제 시 사용할 비밀번호를 입력해주세요.');
       passwordInput.focus();
       return;
     }
@@ -277,10 +465,11 @@
       author: author,
       password: password,
       content: content,
+      likes: 0,
+      isEdited: false,
       createdAt: new Date().toISOString()
     };
 
-    // Add to top of list
     entries.unshift(newEntry);
     saveEntries();
     render();
@@ -290,8 +479,7 @@
     passwordInput.value = '';
     contentInput.value = '';
 
-    // Show Dedicated Success Modal popup!
-    openSuccessModal(newEntry);
+    openSuccessModal('기록 완료!', '소중한 방명록이 성공적으로 등록되었습니다. 🎉', newEntry);
   }
 
   // Event Listeners
@@ -303,6 +491,24 @@
     btnSuccessConfirm.addEventListener('click', closeSuccessModal);
   }
 
+  // Edit Event Handlers
+  if (btnEditCancel) {
+    btnEditCancel.addEventListener('click', closeEditModal);
+  }
+
+  if (btnEditConfirm) {
+    btnEditConfirm.addEventListener('click', () => {
+      if (pendingEditId) {
+        confirmEdit(
+          pendingEditId,
+          editPasswordInput ? editPasswordInput.value : '',
+          editContentInput ? editContentInput.value : ''
+        );
+      }
+    });
+  }
+
+  // Delete Event Handlers
   if (btnDeleteCancel) {
     btnDeleteCancel.addEventListener('click', closeDeleteModal);
   }
@@ -330,33 +536,34 @@
 
   // Close modals on backdrop click
   window.addEventListener('click', (e) => {
-    if (e.target === successModal) {
-      closeSuccessModal();
-    }
-    if (e.target === deleteModal) {
-      closeDeleteModal();
-    }
+    if (e.target === successModal) closeSuccessModal();
+    if (e.target === editModal) closeEditModal();
+    if (e.target === deleteModal) closeDeleteModal();
   });
 
   // Close modals on Escape key
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       closeSuccessModal();
+      closeEditModal();
       closeDeleteModal();
     }
   });
 
-  // Global namespace for inline onclick handlers
+  // Global namespace for onclick handlers
   window.Guestbook = {
+    openEditModal: openEditModal,
+    closeEditModal: closeEditModal,
     openDeleteModal: openDeleteModal,
     closeDeleteModal: closeDeleteModal,
     openSuccessModal: openSuccessModal,
-    closeSuccessModal: closeSuccessModal
+    closeSuccessModal: closeSuccessModal,
+    toggleLike: toggleLike
   };
 
   // Initialize
   document.addEventListener('DOMContentLoaded', () => {
-    loadEntries();
+    loadData();
     render();
   });
 })();

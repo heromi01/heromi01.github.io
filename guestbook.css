@@ -153,14 +153,14 @@
 .guestbook-item:hover {
   background: rgba(255, 255, 255, 0.05);
   border-color: rgba(99, 102, 241, 0.3);
-  transform: translateX(4px);
+  transform: translateX(2px);
 }
 
 .item-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .author-info {
@@ -170,8 +170,8 @@
 }
 
 .author-avatar {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   background: linear-gradient(135deg, #4f46e5, #06b6d4);
   display: flex;
@@ -181,6 +181,13 @@
   font-weight: 700;
   color: #ffffff;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
+}
+
+.author-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .author-name {
@@ -192,18 +199,51 @@
 .author-date {
   font-size: 0.75rem;
   color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.btn-delete {
+.edited-badge {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+/* 카드 상단 관리 버튼 그룹 (수정, 삭제) */
+.item-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-item-action {
   background: transparent;
-  border: 1px solid rgba(239, 68, 68, 0.25);
-  color: #f87171;
-  border-radius: 8px;
-  padding: 4px 10px;
+  border-radius: 6px;
+  padding: 4px 8px;
   font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.btn-edit {
+  color: #94a3b8;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.btn-edit:hover {
+  background: rgba(99, 102, 241, 0.15);
+  border-color: rgba(99, 102, 241, 0.4);
+  color: #c7d2fe;
+}
+
+.btn-delete {
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.25);
 }
 
 .btn-delete:hover {
@@ -218,6 +258,55 @@
   line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-word;
+  margin-bottom: 12px;
+}
+
+/* 카드 하단 반응/공감(Like) 바 */
+.item-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.btn-like {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #94a3b8;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+
+.btn-like:hover {
+  background: rgba(244, 63, 94, 0.12);
+  border-color: rgba(244, 63, 94, 0.3);
+  color: #fda4af;
+  transform: scale(1.05);
+}
+
+.btn-like.liked {
+  background: rgba(244, 63, 94, 0.2);
+  border-color: rgba(244, 63, 94, 0.5);
+  color: #fb7185;
+}
+
+.btn-like.liked .like-icon {
+  animation: heartBeat 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes heartBeat {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.35); }
+  100% { transform: scale(1); }
 }
 
 /* 빈 목록 상태 */
@@ -236,7 +325,7 @@
 }
 
 /* =========================================
-   Modal Popup Styles (별도 알림 창 및 삭제 창)
+   Modal Popup Styles (알림 창, 수정 창, 삭제 창)
    ========================================= */
 
 .modal-backdrop {
@@ -290,20 +379,26 @@
 }
 
 .modal-icon {
-  width: 64px;
-  height: 64px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   margin: 0 auto 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2rem;
+  font-size: 1.8rem;
 }
 
 .modal-icon.success {
   background: rgba(16, 185, 129, 0.15);
   border: 2px solid rgba(16, 185, 129, 0.4);
   color: #34d399;
+}
+
+.modal-icon.edit {
+  background: rgba(99, 102, 241, 0.15);
+  border: 2px solid rgba(99, 102, 241, 0.4);
+  color: #a5b4fc;
 }
 
 .modal-icon.danger {
@@ -320,11 +415,66 @@
 }
 
 .modal-desc {
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   color: #94a3b8;
   line-height: 1.5;
   margin-bottom: 20px;
   word-break: keep-all;
+}
+
+/* 모달 내부 폼 */
+.modal-form-group {
+  text-align: left;
+  margin-bottom: 14px;
+}
+
+.modal-form-group label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #94a3b8;
+  margin-bottom: 6px;
+}
+
+.modal-textarea {
+  width: 100%;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: #f8fafc;
+  font-size: 0.9rem;
+  font-family: inherit;
+  outline: none;
+  resize: vertical;
+  min-height: 90px;
+}
+
+.modal-textarea:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+}
+
+.modal-input {
+  width: 100%;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: #f8fafc;
+  font-size: 0.92rem;
+  outline: none;
+  font-family: inherit;
+}
+
+.modal-input:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+}
+
+.modal-input.danger:focus {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25);
 }
 
 /* 등록 성공 모달 프리뷰 */
@@ -364,6 +514,7 @@
   display: flex;
   gap: 10px;
   justify-content: center;
+  margin-top: 18px;
 }
 
 .btn-modal {
@@ -404,31 +555,13 @@
   background: rgba(255, 255, 255, 0.18);
 }
 
-.modal-input {
-  width: 100%;
-  background: rgba(15, 23, 42, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 10px;
-  padding: 11px 14px;
-  color: #f8fafc;
-  font-size: 0.95rem;
-  outline: none;
-  margin-bottom: 12px;
-  text-align: center;
-  letter-spacing: 2px;
-}
-
-.modal-input:focus {
-  border-color: #ef4444;
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25);
-}
-
 .modal-error-msg {
   color: #f87171;
   font-size: 0.8rem;
   min-height: 18px;
-  margin-bottom: 14px;
+  margin-top: 8px;
   display: none;
+  text-align: left;
 }
 
 .modal-error-msg.active {
