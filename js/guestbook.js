@@ -478,17 +478,11 @@
 
     try {
       // Insert new entry into Supabase
-      const { data, error } = await supabaseClient
-        .from('guestbook')
-        .insert([
-          {
-            author: author,
-            password_hash: password, // processed by RLS / insert policy
-            content: content,
-            likes: 0
-          }
-        ])
-        .select('id, author, content, likes, is_edited, created_at, updated_at');
+      const { data, error } = await supabaseClient.rpc('create_guestbook_entry', {
+  input_author: author,
+  input_password: password,
+  input_content: content
+});
 
       if (error) throw error;
 
